@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+
 	"github.com/go-chi/chi"
 )
 
@@ -14,7 +15,7 @@ func NewRouter() chi.Router {
 		r.Route("/notes", func(r chi.Router) {
 			r.Post("/add", addNote)
 			r.Get("/", getAllNotes)
-			
+
 			r.Route("/{noteID}", func(r chi.Router) {
 				r.Get("/", getNote)
 				r.Delete("/", deleteNote)
