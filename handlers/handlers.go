@@ -4,69 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
-
-	"github.com/go-chi/chi"
-	"github.com/gorilla/sessions"
-
-	"github.com/bontequero/golang-test-assignment/models"
 )
-
-type env struct {
-	models.DataLayer
-}
-
-const (
-	postgresUrl = "POSTGRES_URL"
-
-	sessionKey   = "SESSION_KEY"
-	cookieName   = "auth-cookie"
-	cookieAuth   = "authenticated"
-	cookieRole   = "role"
-	cookieUserID = "user-id"
-)
-
-var (
-	DB        *env
-	secretKey = []byte(os.Getenv(sessionKey))
-	store     = sessions.NewCookieStore(secretKey)
-)
-
-func NewEnv() (*env, error) {
-	db, err := models.NewDB(os.Getenv(postgresUrl))
-	if err != nil {
-		return nil, err
-	}
-
-	DB = &env{db}
-	return DB, nil
-}
-
-func NewRouter() chi.Router {
-	r := chi.NewRouter()
-
-	r.Post("/login", login)
-	r.Post("/logout", logout)
-
-	r.Route("/api", func(r chi.Router) {
-		r.Route("/notes", func(r chi.Router) {
-			r.Post("/add", addNote)
-			r.Get("/", getAllNotes)
-
-			r.Route("/{noteID}", func(r chi.Router) {
-				r.Get("/", getNote)
-				r.Delete("/", deleteNote)
-			})
-		})
-	})
-
-	return r
-}
-
-type loginRequest struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
-}
 
 func login(w http.ResponseWriter, r *http.Request) {
 	var reqParams loginRequest
@@ -117,7 +55,38 @@ func logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func addNote(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(""))
+	session, err := store.Get(r, cookieName)
+	if err != nil {
+		log.Printf("can not get cookie: %v", err)
+		http.Error(w, "Cookie is invalid", http.StatusBadRequest)
+		return
+	}
+
+	if auth, ok := session.Values[cookieAuth].(bool); !ok || !auth {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	var reqParams noteData
+	if err := json.NewDecoder(r.Body).Decode(&reqParams); err != nil {
+		log.Printf("Cannot parse request parameters: %v; error: %v", reqParams, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = DB.AddNote(map[string]interface{}{
+		"userID":  session.Values[cookieUserID].(int64),
+		"title":   reqParams.Title,
+		"content": reqParams.Content,
+	})
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Added"))
 }
 
 func getAllNotes(w http.ResponseWriter, r *http.Request) {

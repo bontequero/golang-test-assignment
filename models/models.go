@@ -9,13 +9,13 @@ import (
 
 type (
 	DataLayer interface {
-		GetUserInfo(login string) (*user, error)
-		GetAllNotes(userID int64, role string) ([]note, error)
-		GetNote(noteID int64) *note
-		AddNote(userID int64) error
-		DeleteNote(noteID int64) error
+		GetUserInfo(string) (*user, error)
+		GetAllNotes(int64, string) ([]note, error)
+		GetNote(int64) *note
+		AddNote(map[string]interface{}) error
+		DeleteNote(int64) error
 
-		// Нужно для закрытия соединения с базой данных
+		// Метод нужен для закрытия соединения с базой данных из функции main
 		Close() error
 	}
 

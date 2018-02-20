@@ -56,7 +56,17 @@ func (db *DB) GetNote(noteID int64) *note {
 	return nil
 }
 
-func (db *DB) AddNote(userID int64) error {
+func (db *DB) AddNote(data map[string]interface{}) error {
+	_, err := db.Exec(
+		"INSERT INTO notes VALUES (default, $1, $2, $3)",
+		data["userID"],
+		data["title"],
+		data["content"],
+	)
+	if err != nil {
+		return fmt.Errorf("cannot add note: %v", err)
+	}
+
 	return nil
 }
 
