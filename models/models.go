@@ -11,7 +11,7 @@ type (
 	DataLayer interface {
 		GetUserInfo(string) (*user, error)
 		GetAllNotes(int64, string) ([]note, error)
-		GetNote(int64) *note
+		GetNote(int64, int64, string) (*note, error)
 		AddNote(map[string]interface{}) error
 		DeleteNote(int64, int64, string) error
 

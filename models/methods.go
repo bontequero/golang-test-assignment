@@ -52,8 +52,20 @@ func (db *DB) GetAllNotes(userID int64, role string) ([]note, error) {
 	return notes, nil
 }
 
-func (db *DB) GetNote(noteID int64) *note {
-	return nil
+func (db *DB) GetNote(noteID int64, userID int64, role string) (*note, error) {
+	result := &note{ID: noteID}
+	var err error
+
+	if role == roleAdmin {
+		err = db.QueryRow("SELECT title, content FROM notes WHERE id = $1", noteID).Scan(&result.Title, &result.Content)
+	} else {
+		err = db.QueryRow("SELECT title, content FROM notes WHERE id = $1 AND user_id = $2", noteID, userID).Scan(&result.Title, &result.Content)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cannot get note: %v", err)
+	}
+
+	return result, nil
 }
 
 func (db *DB) AddNote(data map[string]interface{}) error {

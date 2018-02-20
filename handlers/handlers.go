@@ -122,7 +122,41 @@ func getAllNotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func getNote(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(""))
+	session, err := store.Get(r, cookieName)
+	if err != nil {
+		log.Printf("can not get cookie: %v", err)
+		http.Error(w, "Cookie is invalid", http.StatusBadRequest)
+		return
+	}
+
+	if auth, ok := session.Values[cookieAuth].(bool); !ok || !auth {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	noteIDparam := chi.URLParam(r, "noteID")
+	noteID, err := strconv.ParseInt(noteIDparam, 10, 64)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Wrong note id", http.StatusBadRequest)
+		return
+	}
+
+	note, err := DB.GetNote(
+		noteID,
+		session.Values[cookieUserID].(int64),
+		session.Values[cookieRole].(string),
+	)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(note); err != nil {
+		log.Printf("can not encode response from db: %v", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+	}
 }
 
 func deleteNote(w http.ResponseWriter, r *http.Request) {
