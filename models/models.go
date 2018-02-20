@@ -10,7 +10,7 @@ import (
 type (
 	DataLayer interface {
 		GetUserInfo(login string) (*user, error)
-		GetAllNotes(userID int64) []note
+		GetAllNotes(userID int64, role string) ([]note, error)
 		GetNote(noteID int64) *note
 		AddNote(userID int64) error
 		DeleteNote(noteID int64) error
@@ -35,6 +35,11 @@ type (
 		Title   string
 		Content string
 	}
+)
+
+const (
+	roleAdmin = "admin"
+	roleUser  = "user"
 )
 
 func NewDB(source string) (*DB, error) {

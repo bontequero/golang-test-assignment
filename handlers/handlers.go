@@ -19,10 +19,11 @@ type env struct {
 const (
 	postgresUrl = "POSTGRES_URL"
 
-	sessionKey = "SESSION_KEY"
-	cookieName = "auth-cookie"
-	cookieAuth = "authenticated"
-	cookieRole = "role"
+	sessionKey   = "SESSION_KEY"
+	cookieName   = "auth-cookie"
+	cookieAuth   = "authenticated"
+	cookieRole   = "role"
+	cookieUserID = "user-id"
 )
 
 var (
@@ -90,6 +91,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 		session.Values[cookieAuth] = true
 		session.Values[cookieRole] = user.Role
+		session.Values[cookieUserID] = user.ID
 		session.Save(r, w)
 
 		w.Write([]byte("Success"))
@@ -108,6 +110,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Values[cookieAuth] = false
 	session.Values[cookieRole] = ""
+	session.Values[cookieUserID] = 0
 	session.Save(r, w)
 
 	w.WriteHeader(http.StatusOK)
@@ -118,7 +121,32 @@ func addNote(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllNotes(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(""))
+	session, err := store.Get(r, cookieName)
+	if err != nil {
+		log.Printf("can not get cookie: %v", err)
+		http.Error(w, "Cookie is invalid", http.StatusBadRequest)
+		return
+	}
+
+	if auth, ok := session.Values[cookieAuth].(bool); !ok || !auth {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	notes, err := DB.GetAllNotes(
+		session.Values[cookieUserID].(int64),
+		session.Values[cookieRole].(string),
+	)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(notes); err != nil {
+		log.Printf("can not encode response from db: %v", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+	}
 }
 
 func getNote(w http.ResponseWriter, r *http.Request) {
