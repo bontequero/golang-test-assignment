@@ -13,7 +13,7 @@ type (
 		GetAllNotes(int64, string) ([]note, error)
 		GetNote(int64) *note
 		AddNote(map[string]interface{}) error
-		DeleteNote(int64) error
+		DeleteNote(int64, int64, string) error
 
 		// Метод нужен для закрытия соединения с базой данных из функции main
 		Close() error

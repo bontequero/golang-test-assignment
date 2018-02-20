@@ -70,6 +70,18 @@ func (db *DB) AddNote(data map[string]interface{}) error {
 	return nil
 }
 
-func (db *DB) DeleteNote(noteID int64) error {
+func (db *DB) DeleteNote(noteID int64, userID int64, role string) error {
+	var err error
+
+	if role == roleAdmin {
+		_, err = db.Exec("DELETE FROM notes WHERE id = $1", noteID)
+	} else {
+		_, err = db.Exec("DELETE FROM notes WHERE id = $1 AND user_id = $2", noteID, userID)
+	}
+
+	if err != nil {
+		return fmt.Errorf("cannot delete note: %v", err)
+	}
+
 	return nil
 }
