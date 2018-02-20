@@ -18,8 +18,11 @@ type env struct {
 
 const (
 	postgresUrl = "POSTGRES_URL"
-	sessionKey  = "SESSION_KEY"
-	cookieName  = "auth"
+
+	sessionKey = "SESSION_KEY"
+	cookieName = "auth-cookie"
+	cookieAuth = "authenticated"
+	cookieRole = "role"
 )
 
 var (
@@ -42,6 +45,7 @@ func NewRouter() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/login", login)
+	r.Post("/logout", logout)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/notes", func(r chi.Router) {
@@ -84,7 +88,8 @@ func login(w http.ResponseWriter, r *http.Request) {
 			log.Printf("can not get cookie: %v", err)
 		}
 
-		session.Values["authenticated"] = true
+		session.Values[cookieAuth] = true
+		session.Values[cookieRole] = user.Role
 		session.Save(r, w)
 
 		w.Write([]byte("Success"))
@@ -93,6 +98,19 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write([]byte("Wrong login parameters"))
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, cookieName)
+	if err != nil {
+		log.Printf("can not get cookie: %v", err)
+	}
+
+	session.Values[cookieAuth] = false
+	session.Values[cookieRole] = ""
+	session.Save(r, w)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func addNote(w http.ResponseWriter, r *http.Request) {
